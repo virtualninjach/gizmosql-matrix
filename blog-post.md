@@ -28,6 +28,27 @@ Before we go deeper down the rabbit hole, let's ground ourselves. GizmoSQL is a 
 
 This last point is the one that matters most for our story. When an AI agent needs to talk to a database, it needs something faster than JDBC, smarter than REST, and more expressive than a key-value store. It needs GizmoSQL.
 
+### Running on Windows — Now a First-Class Citizen
+
+This entire project was built and run on **Windows 11**, made possible by GizmoSQL's recently released native Windows installer. Until now, running high-performance Arrow Flight SQL servers on Windows typically meant WSL workarounds or Docker containers. With the new Windows release, GizmoSQL ships as a proper Windows executable — `gizmosql_server.exe` — that you can run directly from the command line or wire into a `.bat` file like any other Windows service.
+
+Starting the server is a single command:
+
+```bat
+gizmosql_server.exe -B duckdb --database-filename "C:\projects\blogpost\gizmosql-matrix\persons.duckdb" --username scott --password tiger
+```
+
+Breaking that down:
+
+| Flag | Value | Meaning |
+|---|---|---|
+| `-B duckdb` | `duckdb` | Use DuckDB as the backend engine |
+| `--database-filename` | `persons.duckdb` | Path to the DuckDB database file |
+| `--username` | `scott` | Authentication username |
+| `--password` | `tiger` | Authentication password |
+
+The server starts, binds to port `31337` by default, and is immediately reachable by any ADBC-compatible client — Python scripts, the GizmoSQL CLI, or an AI agent. No configuration files. No service registration. No WSL. Just Windows.
+
 ---
 
 ## Building the Matrix: The Project Architecture
