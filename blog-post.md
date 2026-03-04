@@ -351,6 +351,48 @@ An AI agent needs to ask questions of data quickly, repeatedly, and at scale. Gi
 
 ---
 
+## What Does It Actually Cost to Run an AI Monitoring Agent?
+
+A natural question when building something like this: *how expensive is it?*
+
+Running this project for **30 minutes against a 1-million-row database using Claude Opus 4.6 cost approximately $5.00**. Here's what that breaks down to and — more importantly — what drives the cost.
+
+### The Cost Is in the Cycles, Not the Rows
+
+This surprises most people, but **the number of rows in your database has almost no impact on Claude API cost**. The API charges for *tokens* — the text sent to and received from the model. Here's why row count barely matters:
+
+- Aggregation queries (`AVG`, `MIN`, `MAX`, `COUNT`) return **one row** whether your table has 1M or 20M rows
+- The `query_database` tool caps results at **25 rows** regardless of table size
+- A `SELECT TOP 10 ... ORDER BY microvolts DESC` returns 10 rows either way
+
+What *does* drive cost is **how often Claude runs** and **how many tool calls it makes per cycle**:
+
+| Factor | Impact on Cost |
+|---|---|
+| Monitoring interval (30s = 120 cycles/hour) | High — directly multiplies everything |
+| Tool calls per cycle (typically 3–5) | High — each round-trip to Claude costs tokens |
+| Model choice (Opus vs. Sonnet) | High — Opus is 5× more expensive than Sonnet |
+| Database row count | Negligible |
+| Query complexity | Negligible |
+
+At 30-second intervals, you run ~60 cycles in 30 minutes. Each cycle involves a system prompt, multiple query results, and a final report — all billed as Opus 4.6 tokens. That's where the $5 went.
+
+### Scaling to 20 Million Rows
+
+If the database grew from 1M to 20M rows, your Claude API bill would stay essentially the same. DuckDB (via GizmoSQL) would take slightly longer to execute queries against the larger dataset, but Claude only ever sees the aggregated or top-N results — the same volume of text either way.
+
+### Reducing Cost Without Sacrificing Intelligence
+
+Three levers to pull:
+
+1. **Increase the interval** — change `INTERVAL_SECONDS = 30` to `60` or `120`. Halving cycles halves cost
+2. **Switch to Sonnet 4.6** — replace `claude-opus-4-6` with `claude-sonnet-4-6` for a ~5× cost reduction with minimal quality loss for this type of analytical task
+3. **Cap tool calls per cycle** — instruct Claude in the system prompt to run no more than 3 queries before reporting
+
+A production deployment might run Sonnet 4.6 every 60 seconds, reserving Opus 4.6 for a deeper analysis cycle every 10 minutes — giving you intelligent continuous monitoring at a fraction of the cost.
+
+---
+
 ## Conclusion: Taking the Red Pill
 
 We set out to build a simulation of a controlled population — a Matrix. We ended up building something more interesting: a demonstration of what AI-agent-ready infrastructure looks like in practice.
